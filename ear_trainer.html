@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ear Trainer</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  :root{
+    --bg:#f9f8f5;--surface:#ffffff;--surface2:#f2f0eb;--surface3:#e8e6e0;
+    --border:#e0ddd6;--border2:#ccc9c0;
+    --text:#1a1917;--text2:#6b6860;--text3:#9c9890;
+    --purple-bg:#EEEDFE;--purple-bd:#AFA9EC;--purple-tx:#3C3489;
+    --teal-bg:#E1F5EE;--teal-bd:#5DCAA5;--teal-tx:#085041;
+    --amber-bg:#FAEEDA;--amber-bd:#EF9F27;--amber-tx:#633806;
+    --green-bg:#EAF3DE;--green-bd:#97C459;--green-tx:#27500A;
+    --red-bg:#FCEBEB;--red-bd:#F09595;--red-tx:#A32D2D;
+    --radius:8px;--radius-lg:12px;
+  }
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding:0}
+
+  /* NAV */
+  nav{background:var(--surface);border-bottom:0.5px solid var(--border);padding:0 24px;display:flex;align-items:center;gap:0;position:sticky;top:0;z-index:10}
+  .nav-title{font-size:14px;font-weight:500;color:var(--text);padding:16px 0;margin-right:24px;white-space:nowrap}
+  .nav-tab{font-size:13px;color:var(--text2);padding:16px 16px;cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;background:none;border-top:none;border-left:none;border-right:none;transition:color 0.15s}
+  .nav-tab:hover{color:var(--text)}
+  .nav-tab.active{color:var(--purple-tx);border-bottom-color:var(--purple-bd);font-weight:500}
+
+  /* LAYOUT */
+  .page{display:none;max-width:680px;margin:0 auto;padding:32px 24px}
+  .page.active{display:block}
+
+  /* STATS BAR */
+  .stats-bar{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:24px}
+  .stat-card{background:var(--surface2);border-radius:var(--radius);padding:12px 16px;text-align:center}
+  .stat-val{font-size:22px;font-weight:500;color:var(--text)}
+  .stat-lbl{font-size:11px;color:var(--text3);margin-top:2px;text-transform:uppercase;letter-spacing:.04em}
+
+  /* BUTTONS */
+  .play-btn{background:var(--surface);border:0.5px solid var(--border2);border-radius:var(--radius);padding:11px 28px;font-size:14px;font-weight:500;color:var(--text);cursor:pointer;transition:background 0.1s}
+  .play-btn:hover{background:var(--surface2)}
+  .play-btn:active{transform:scale(0.98)}
+  .small-btn{background:transparent;border:0.5px solid var(--border2);border-radius:20px;padding:5px 14px;font-size:12px;color:var(--text2);cursor:pointer}
+  .small-btn:hover{background:var(--surface2)}
+
+  /* ANS GRID */
+  .ans-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin:16px 0}
+  .ans-btn{background:var(--surface);border:0.5px solid var(--border2);border-radius:var(--radius);padding:11px 8px;font-size:13px;font-weight:500;color:var(--text);cursor:pointer;transition:background 0.12s,border-color 0.12s;text-align:center}
+  .ans-btn:hover:not(:disabled){background:var(--surface2)}
+  .ans-btn.correct{background:var(--green-bg);border-color:var(--green-bd);color:var(--green-tx)}
+  .ans-btn.wrong{background:var(--red-bg);border-color:var(--red-bd);color:var(--red-tx)}
+  .ans-btn.reveal{background:var(--green-bg);border-color:var(--green-bd);color:var(--green-tx);opacity:0.55}
+  .ans-btn:disabled{cursor:default}
+
+  /* MODE PILLS */
+  .pill-row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:20px}
+  .pill{font-size:12px;padding:5px 13px;border-radius:20px;border:0.5px solid var(--border2);background:transparent;color:var(--text2);cursor:pointer;transition:background 0.1s}
+  .pill:hover{background:var(--surface2)}
+  .pill.active{background:var(--purple-bg);border-color:var(--purple-bd);color:var(--purple-tx);font-weight:500}
+
+  /* FEEDBACK */
+  .feedback{font-size:13px;color:var(--text2);min-height:20px;margin:10px 0 4px}
+  .feedback.ok{color:var(--green-tx)}
+  .feedback.bad{color:var(--red-tx)}
+
+  /* DIVIDER */
+  hr{border:none;border-top:0.5px solid var(--border);margin:20px 0}
+
+  /* SECTION LABEL */
+  .sec-label{font-size:11px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px}
+
+  /* PROG DISPLAY */
+  .prog-strip{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0}
+  .prog-chord{background:var(--surface2);border:0.5px solid var(--border);border-radius:var(--radius);padding:10px 16px;font-size:14px;font-weight:500;color:var(--text);min-width:72px;text-align:center;transition:background 0.1s,border-color 0.1s}
+  .prog-chord.playing{background:var(--purple-bg);border-color:var(--purple-bd);color:var(--purple-tx)}
+
+  /* SCALE DEGREE DISPLAY */
+  .degree-row{display:flex;gap:6px;flex-wrap:wrap;margin:14px 0}
+  .deg{width:44px;height:44px;border-radius:50%;background:var(--surface2);border:0.5px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:500;color:var(--text2);transition:background 0.1s}
+  .deg.active{background:var(--amber-bg);border-color:var(--amber-bd);color:var(--amber-tx)}
+
+  /* ACCURACY RING */
+  .ring-wrap{display:flex;align-items:center;gap:20px;margin-bottom:20px}
+  canvas.ring{flex-shrink:0}
+  .ring-detail{font-size:13px;color:var(--text2);line-height:1.8}
+  .ring-detail span{font-weight:500;color:var(--text)}
+
+  /* SETTINGS ROW */
+  .settings-row{display:flex;align-items:center;gap:12px;margin-bottom:20px;flex-wrap:wrap}
+  .settings-row label{font-size:13px;color:var(--text2)}
+  .settings-row input[type=range]{width:100px}
+  .settings-row span{font-size:13px;font-weight:500;color:var(--text);min-width:36px}
+
+  @media(max-width:480px){
+    .stats-bar{grid-template-columns:repeat(3,1fr)}
+    .page{padding:20px 16px}
+    nav{padding:0 16px}
+    .nav-title{margin-right:12px}
+    .nav-tab{padding:16px 10px}
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <span class="nav-title">Ear trainer</span>
+  <button class="nav-tab active" onclick="showPage('chords')">Chords</button>
+  <button class="nav-tab" onclick="showPage('progressions')">Progressions</button>
+  <button class="nav-tab" onclick="showPage('melody')">Melody</button>
+</nav>
+
+<!-- ═══════════════════════════════════ CHORDS PAGE ═══════════════════════════════════ -->
+<div class="page active" id="page-chords">
+  <div class="pill-row">
+    <button class="pill active" id="cm-triads" onclick="cSetMode('triads')">Triads</button>
+    <button class="pill" id="cm-four" onclick="cSetMode('four')">4-part</button>
+    <button class="pill" id="cm-neo" onclick="cSetMode('neo')">Neo-soul</button>
+    <button class="pill" id="cm-mixed" onclick="cSetMode('mixed')">Mixed</button>
+    <button class="pill active" id="cv-block" onclick="cSetVoicing('block')" style="margin-left:auto">Block</button>
+    <button class="pill" id="cv-arp" onclick="cSetVoicing('arp')">Arpeggiated</button>
+  </div>
+
+  <div class="stats-bar">
+    <div class="stat-card"><div class="stat-val" id="c-score">0</div><div class="stat-lbl">Correct</div></div>
+    <div class="stat-card"><div class="stat-val" id="c-total">0</div><div class="stat-lbl">Attempted</div></div>
+    <div class="stat-card"><div class="stat-val" id="c-pct">—</div><div class="stat-lbl">Accuracy</div></div>
+  </div>
+
+  <div style="display:flex;align-items:center;gap:12px;margin-bottom:6px">
+    <button class="play-btn" onclick="cPlay()">Play chord</button>
+    <span style="font-size:13px;color:var(--text3)" id="c-qnum">Question 1</span>
+  </div>
+  <div class="feedback" id="c-feedback">Press play, then identify the chord.</div>
+  <hr>
+  <div class="ans-grid" id="c-grid"></div>
+  <div style="display:flex;gap:8px;margin-top:12px">
+    <button class="small-btn" onclick="cPlay()">Replay</button>
+    <button class="small-btn" onclick="cNext()">Skip</button>
+    <button class="small-btn" onclick="cReset()" style="margin-left:auto">Reset</button>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════ PROGRESSIONS PAGE ═══════════════════════════════════ -->
+<div class="page" id="page-progressions">
+  <div class="pill-row">
+    <button class="pill active" id="pm-common" onclick="pSetMode('common')">Common</button>
+    <button class="pill" id="pm-neo" onclick="pSetMode('neo')">Neo-soul</button>
+    <button class="pill" id="pm-mixed" onclick="pSetMode('mixed')">Mixed</button>
+  </div>
+
+  <div class="stats-bar">
+    <div class="stat-card"><div class="stat-val" id="p-score">0</div><div class="stat-lbl">Correct</div></div>
+    <div class="stat-card"><div class="stat-val" id="p-total">0</div><div class="stat-lbl">Attempted</div></div>
+    <div class="stat-card"><div class="stat-val" id="p-pct">—</div><div class="stat-lbl">Accuracy</div></div>
+  </div>
+
+  <div class="settings-row">
+    <label>Tempo</label>
+    <input type="range" min="50" max="100" value="72" step="1" id="p-bpm" oninput="document.getElementById('p-bpm-out').textContent=this.value+' bpm'">
+    <span id="p-bpm-out">72 bpm</span>
+  </div>
+
+  <div style="display:flex;align-items:center;gap:12px;margin-bottom:6px">
+    <button class="play-btn" onclick="pPlay()">Play progression</button>
+    <span style="font-size:13px;color:var(--text3)" id="p-qnum">Question 1</span>
+  </div>
+
+  <div class="prog-strip" id="p-strip"></div>
+  <div class="feedback" id="p-feedback">Press play, then identify the progression.</div>
+  <hr>
+  <div class="ans-grid" id="p-grid"></div>
+  <div style="display:flex;gap:8px;margin-top:12px">
+    <button class="small-btn" onclick="pPlay()">Replay</button>
+    <button class="small-btn" onclick="pNext()">Skip</button>
+    <button class="small-btn" onclick="pReset()" style="margin-left:auto">Reset</button>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════ MELODY PAGE ═══════════════════════════════════ -->
+<div class="page" id="page-melody">
+  <div class="pill-row">
+    <button class="pill active" id="mm-major" onclick="mSetMode('major')">Major</button>
+    <button class="pill" id="mm-minor" onclick="mSetMode('minor')">Minor / dorian</button>
+    <button class="pill" id="mm-mixed" onclick="mSetMode('mixed')">Mixed</button>
+    <button class="pill active" id="mv-context" onclick="mSetContext(true)" style="margin-left:auto">With context</button>
+    <button class="pill" id="mv-bare" onclick="mSetContext(false)">Bare note</button>
+  </div>
+
+  <div class="stats-bar">
+    <div class="stat-card"><div class="stat-val" id="m-score">0</div><div class="stat-lbl">Correct</div></div>
+    <div class="stat-card"><div class="stat-val" id="m-total">0</div><div class="stat-lbl">Attempted</div></div>
+    <div class="stat-card"><div class="stat-val" id="m-pct">—</div><div class="stat-lbl">Accuracy</div></div>
+  </div>
+
+  <div style="display:flex;align-items:center;gap:12px;margin-bottom:6px">
+    <button class="play-btn" onclick="mPlay()">Play note</button>
+    <span style="font-size:13px;color:var(--text3)" id="m-qnum">Question 1</span>
+  </div>
+
+  <div class="degree-row" id="m-degree-row"></div>
+  <div class="feedback" id="m-feedback">Press play — a root chord sounds first, then the mystery note.</div>
+  <hr>
+  <div class="ans-grid" id="m-grid"></div>
+  <div style="display:flex;gap:8px;margin-top:12px">
+    <button class="small-btn" onclick="mPlay()">Replay</button>
+    <button class="small-btn" onclick="mNext()">Skip</button>
+    <button class="small-btn" onclick="mReset()" style="margin-left:auto">Reset</button>
+  </div>
+</div>
+
+<script>
+// ─── AUDIO ENGINE ────────────────────────────────────────────────────────────
+let ACX = null;
+function getACX(){ if(!ACX) ACX=new(window.AudioContext||window.webkitAudioContext)(); return ACX; }
+function mf(midi){ return 440*Math.pow(2,(midi-69)/12); }
+
+function playNote(ctx, midi, t, dur, vol){
+  vol = vol||0.18;
+  // Triangle + sine + subtle sawtooth for guitar-like warmth
+  [[  'triangle', 0,    vol*0.5 ],
+   [  'sine',     0,    vol*0.35],
+   [  'sawtooth', 0.5,  vol*0.06],
+  ].forEach(([type, detune, gain])=>{
+    const o=ctx.createOscillator(), g=ctx.createGain();
+    o.connect(g); g.connect(ctx.destination);
+    o.type=type; o.frequency.value=mf(midi); o.detune.value=detune*100;
+    g.gain.setValueAtTime(gain, t);
+    g.gain.setTargetAtTime(gain*0.6, t+0.04, 0.12);
+    g.gain.exponentialRampToValueAtTime(0.0001, t+dur);
+    o.start(t); o.stop(t+dur+0.05);
+  });
+  // Harmonic overtone
+  const o2=ctx.createOscillator(), g2=ctx.createGain();
+  o2.connect(g2); g2.connect(ctx.destination);
+  o2.type='sine'; o2.frequency.value=mf(midi)*2;
+  g2.gain.setValueAtTime(vol*0.07,t);
+  g2.gain.exponentialRampToValueAtTime(0.0001,t+dur*0.5);
+  o2.start(t); o2.stop(t+dur*0.5+0.05);
+}
+
+function playChordBlock(ctx, midis, t, dur){
+  midis.forEach(m=>playNote(ctx,m,t,dur));
+}
+
+function playChordArp(ctx, midis, t, dur, stepMs){
+  midis.forEach((m,i)=>playNote(ctx,m,t+i*(stepMs/1000),dur));
+}
+
+// ─── NAV ─────────────────────────────────────────────────────────────────────
+function showPage(name){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('page-'+name).classList.add('active');
+  event.target.classList.add('active');
+}
+
+function slug(s){ return s.replace(/[^a-zA-Z0-9]/g,'_'); }
+
+// ─── SHARED HELPERS ──────────────────────────────────────────────────────────
+function updateStats(pre, score, total){
+  document.getElementById(pre+'-score').textContent=score;
+  document.getElementById(pre+'-total').textContent=total;
+  document.getElementById(pre+'-pct').textContent=total>0?Math.round(score/total*100)+'%':'—';
+}
+
+function setFeedback(id, text, state){
+  const el=document.getElementById(id);
+  el.textContent=text;
+  el.className='feedback'+(state?' '+state:'');
+}
+
+function disableGrid(gridId){
+  document.querySelectorAll('#'+gridId+' .ans-btn').forEach(b=>b.disabled=true);
+}
+
+function clearGrid(gridId){
+  document.querySelectorAll('#'+gridId+' .ans-btn').forEach(b=>{
+    b.classList.remove('correct','wrong','reveal');
+    b.disabled=false;
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// MODULE 1 — CHORDS
+// ═══════════════════════════════════════════════════════════════════════════════
+const TRIADS=[
+  {name:'Major',      ivs:[0,4,7],          desc:'bright, stable'},
+  {name:'Minor',      ivs:[0,3,7],          desc:'dark, stable'},
+  {name:'Diminished', ivs:[0,3,6],          desc:'tense, unstable'},
+  {name:'Augmented',  ivs:[0,4,8],          desc:'mysterious'},
+  {name:'Sus2',       ivs:[0,2,7],          desc:'open, floating'},
+  {name:'Sus4',       ivs:[0,5,7],          desc:'suspended'},
+];
+const FOUR=[
+  {name:'Major 7',    ivs:[0,4,7,11],       desc:'warm, jazzy'},
+  {name:'Minor 7',    ivs:[0,3,7,10],       desc:'smooth, dark'},
+  {name:'Dominant 7', ivs:[0,4,7,10],       desc:'bluesy'},
+  {name:'Half-dim 7', ivs:[0,3,6,10],       desc:'melancholic'},
+  {name:'Dim 7',      ivs:[0,3,6,9],        desc:'dramatic'},
+];
+const NEO=[
+  {name:'Minor 9',    ivs:[0,3,7,10,14],    desc:'lush, neo-soul'},
+  {name:'Major 9',    ivs:[0,4,7,11,14],    desc:'bright, open'},
+  {name:'Minor 11',   ivs:[0,3,7,10,14,17], desc:'dense, suspended'},
+  {name:'Dominant 9', ivs:[0,4,7,10,14],    desc:'funky'},
+  {name:'9sus4',      ivs:[0,5,7,10,14],    desc:'floating, modern'},
+  {name:'Maj7#11',    ivs:[0,4,7,11,18],    desc:'lydian, dreamy'},
+];
+
+let cMode='triads', cVoicing='block';
+let cScore=0, cTotal=0, cQNum=1, cCurrent=null, cRoot=60, cAnswered=false;
+
+function cPool(){ return cMode==='triads'?TRIADS:cMode==='four'?FOUR:cMode==='neo'?NEO:[...TRIADS,...FOUR,...NEO]; }
+
+function cSetMode(m){
+  cMode=m;
+  ['triads','four','neo','mixed'].forEach(k=>document.getElementById('cm-'+k).classList.toggle('active',k===m));
+  cBuildGrid(); cPick();
+}
+function cSetVoicing(v){
+  cVoicing=v;
+  ['block','arp'].forEach(k=>document.getElementById('cv-'+k).classList.toggle('active',k===v));
+}
+
+function cPick(){
+  const p=cPool();
+  cCurrent=p[Math.floor(Math.random()*p.length)];
+  cRoot=45+Math.floor(Math.random()*13);
+  cAnswered=false;
+  setFeedback('c-feedback','Press play, then identify the chord.');
+  clearGrid('c-grid');
+}
+
+function cPlay(){
+  const ctx=getACX(), now=ctx.currentTime+0.05;
+  const midis=cCurrent.ivs.map(iv=>cRoot+iv);
+  if(cVoicing==='block') playChordBlock(ctx,midis,now,2.4);
+  else playChordArp(ctx,midis,now,2.2,160);
+}
+
+function cCheck(name){
+  if(cAnswered) return;
+  cAnswered=true; cTotal++;
+  const ok=name===cCurrent.name;
+  if(ok) cScore++;
+  updateStats('c',cScore,cTotal);
+  disableGrid('c-grid');
+  const selEl=document.getElementById('cab-'+slug(name));
+  const corEl=document.getElementById('cab-'+slug(cCurrent.name));
+  if(ok){
+    selEl.classList.add('correct');
+    setFeedback('c-feedback','Correct — '+cCurrent.desc+'.','ok');
+  } else {
+    selEl.classList.add('wrong');
+    corEl.classList.add('reveal');
+    setFeedback('c-feedback','That was '+cCurrent.name+' — '+cCurrent.desc+'.','bad');
+  }
+  setTimeout(()=>cNext(),2200);
+}
+
+function cNext(){
+  cQNum++;
+  document.getElementById('c-qnum').textContent='Question '+cQNum;
+  cPick();
+}
+function cReset(){
+  cScore=0;cTotal=0;cQNum=1;
+  updateStats('c',0,0);
+  document.getElementById('c-qnum').textContent='Question 1';
+  cPick();
+}
+
+function cBuildGrid(){
+  const p=cPool(), grid=document.getElementById('c-grid');
+  grid.innerHTML='';
+  p.forEach(chord=>{
+    const b=document.createElement('button');
+    b.className='ans-btn'; b.id='cab-'+slug(chord.name);
+    b.textContent=chord.name;
+    b.addEventListener('click',()=>cCheck(chord.name));
+    grid.appendChild(b);
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// MODULE 2 — PROGRESSIONS
+// ═══════════════════════════════════════════════════════════════════════════════
+const PROG_COMMON=[
+  {name:'I — IV — V — I',       label:'I–IV–V–I',        ivs:[0,5,7,0],  types:['maj','maj','maj','maj'], desc:'major cadence'},
+  {name:'I — V — vi — IV',      label:'I–V–vi–IV',       ivs:[0,7,9,5],  types:['maj','maj','min','maj'], desc:'pop loop'},
+  {name:'ii — V — I',           label:'ii–V–I',          ivs:[2,7,0],    types:['min','dom','maj'],       desc:'jazz cadence'},
+  {name:'I — vi — IV — V',      label:'I–vi–IV–V',       ivs:[0,9,5,7],  types:['maj','min','maj','maj'], desc:'50s progression'},
+  {name:'vi — IV — I — V',      label:'vi–IV–I–V',       ivs:[9,5,0,7],  types:['min','maj','maj','maj'], desc:'minor loop'},
+  {name:'i — VII — VI — VII',   label:'i–VII–VI–VII',    ivs:[0,10,8,10],types:['min','maj','maj','maj'], desc:'andalusian'},
+];
+const PROG_NEO=[
+  {name:'i — iv',               label:'i–iv',            ivs:[0,5],      types:['min9','min11'],          desc:'anchor loop'},
+  {name:'i — VI — III — VII',   label:'i–VI–III–VII',    ivs:[0,8,3,10], types:['min9','maj7','min7','sus4'], desc:'the drift'},
+  {name:'i — bVII — VI — v',    label:'i–♭VII–VI–v',     ivs:[0,10,8,7], types:['min9','maj9','maj7#11','min9'], desc:'descent'},
+  {name:'IV — iii — ii — i',    label:'IV–iii–ii–i',     ivs:[5,4,2,0],  types:['maj7','min7','min9','min11'], desc:'reverse fall'},
+  {name:'i — iv — bVII — bIII', label:'i–iv–♭VII–♭III',  ivs:[0,5,10,3], types:['min9','min11','9sus4','maj9'], desc:'modal drift'},
+];
+
+// interval offsets for chord types
+function buildChordMidis(root, ivOffset, type){
+  const r=root+ivOffset;
+  const shapes={
+    'maj':   [0,4,7],
+    'min':   [0,3,7],
+    'dom':   [0,4,7,10],
+    'maj7':  [0,4,7,11],
+    'min7':  [0,3,7,10],
+    'min9':  [0,3,7,10,14],
+    'maj9':  [0,4,7,11,14],
+    'min11': [0,3,7,10,14,17],
+    'sus4':  [0,5,7],
+    '9sus4': [0,5,7,10,14],
+    'maj7#11':[0,4,7,11,18],
+  };
+  return (shapes[type]||shapes['maj']).map(s=>r+s);
+}
+
+let pMode='common';
+let pScore=0,pTotal=0,pQNum=1,pCurrent=null,pRoot=48,pAnswered=false;
+
+function pPool(){ return pMode==='common'?PROG_COMMON:pMode==='neo'?PROG_NEO:[...PROG_COMMON,...PROG_NEO]; }
+
+function pSetMode(m){
+  pMode=m;
+  ['common','neo','mixed'].forEach(k=>document.getElementById('pm-'+k).classList.toggle('active',k===m));
+  pBuildGrid(); pPick();
+}
+
+function pPick(){
+  const p=pPool();
+  pCurrent=p[Math.floor(Math.random()*p.length)];
+  pRoot=45+Math.floor(Math.random()*12);
+  pAnswered=false;
+  setFeedback('p-feedback','Press play, then identify the progression.');
+  clearGrid('p-grid');
+  // build chord display (hidden labels)
+  const strip=document.getElementById('p-strip');
+  strip.innerHTML='';
+  pCurrent.ivs.forEach((iv,i)=>{
+    const d=document.createElement('div');
+    d.className='prog-chord'; d.id='pchord-'+i;
+    d.textContent='?';
+    strip.appendChild(d);
+  });
+}
+
+function pPlay(){
+  const ctx=getACX();
+  const bpm=parseInt(document.getElementById('p-bpm').value);
+  const barMs=(60000/bpm)*2;
+  let t=ctx.currentTime+0.1;
+  pCurrent.ivs.forEach((iv,i)=>{
+    const midis=buildChordMidis(pRoot,iv,pCurrent.types[i]);
+    const barSec=barMs/1000;
+    playChordArp(ctx,midis,t,barSec*0.9,140);
+    const chordEl=document.getElementById('pchord-'+i);
+    const delay=(t-ctx.currentTime)*1000;
+    setTimeout(()=>{
+      document.querySelectorAll('.prog-chord').forEach(c=>c.classList.remove('playing'));
+      if(chordEl) chordEl.classList.add('playing');
+    }, delay);
+    t+=barSec;
+  });
+  setTimeout(()=>document.querySelectorAll('.prog-chord').forEach(c=>c.classList.remove('playing')), (t-ctx.currentTime)*1000+200);
+}
+
+function pCheck(name){
+  if(pAnswered) return;
+  pAnswered=true; pTotal++;
+  const ok=name===pCurrent.name;
+  if(ok) pScore++;
+  updateStats('p',pScore,pTotal);
+  disableGrid('p-grid');
+  // reveal chord labels
+  pCurrent.ivs.forEach((iv,i)=>{
+    const el=document.getElementById('pchord-'+i);
+    if(el) el.textContent=pCurrent.label.split('–')[i]||'?';
+  });
+  const selEl=document.getElementById('pab-'+slug(name));
+  const corEl=document.getElementById('pab-'+slug(pCurrent.name));
+  if(ok){
+    selEl.classList.add('correct');
+    setFeedback('p-feedback','Correct — '+pCurrent.desc+'.','ok');
+  } else {
+    selEl.classList.add('wrong');
+    if(corEl) corEl.classList.add('reveal');
+    setFeedback('p-feedback','That was '+pCurrent.name+' — '+pCurrent.desc+'.','bad');
+  }
+  setTimeout(()=>pNext(),2400);
+}
+
+function pNext(){
+  pQNum++;
+  document.getElementById('p-qnum').textContent='Question '+pQNum;
+  pPick();
+}
+function pReset(){
+  pScore=0;pTotal=0;pQNum=1;
+  updateStats('p',0,0);
+  document.getElementById('p-qnum').textContent='Question 1';
+  pPick();
+}
+function pBuildGrid(){
+  const p=pPool(), grid=document.getElementById('p-grid');
+  grid.innerHTML='';
+  p.forEach(prog=>{
+    const b=document.createElement('button');
+    b.className='ans-btn'; b.id='pab-'+slug(prog.name);
+    b.textContent=prog.label;
+    b.addEventListener('click',()=>pCheck(prog.name));
+    grid.appendChild(b);
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// MODULE 3 — MELODY / SCALE DEGREES
+// ═══════════════════════════════════════════════════════════════════════════════
+const MAJOR_DEGREES=[
+  {name:'1 — root',   deg:1,  iv:0,  label:'1'},
+  {name:'2',          deg:2,  iv:2,  label:'2'},
+  {name:'3',          deg:3,  iv:4,  label:'3'},
+  {name:'4',          deg:4,  iv:5,  label:'4'},
+  {name:'5',          deg:5,  iv:7,  label:'5'},
+  {name:'6',          deg:6,  iv:9,  label:'6'},
+  {name:'7',          deg:7,  iv:11, label:'7'},
+];
+const MINOR_DEGREES=[
+  {name:'1 — root',   deg:1,  iv:0,  label:'1'},
+  {name:'2',          deg:2,  iv:2,  label:'2'},
+  {name:'b3',         deg:3,  iv:3,  label:'b3'},
+  {name:'4',          deg:4,  iv:5,  label:'4'},
+  {name:'5',          deg:5,  iv:7,  label:'5'},
+  {name:'b6',         deg:6,  iv:8,  label:'b6'},
+  {name:'b7',         deg:7,  iv:10, label:'b7'},
+  {name:'9',          deg:9,  iv:14, label:'9'},
+  {name:'11',         deg:11, iv:17, label:'11'},
+];
+
+let mMode='major', mContext=true;
+let mScore=0,mTotal=0,mQNum=1,mCurrent=null,mRoot=60,mAnswered=false;
+
+function mPool(){ return mMode==='major'?MAJOR_DEGREES:mMode==='minor'?MINOR_DEGREES:[...MAJOR_DEGREES,...MINOR_DEGREES.filter(d=>![0,2,5,7].includes(d.iv))]; }
+
+function mSetMode(m){
+  mMode=m;
+  ['major','minor','mixed'].forEach(k=>document.getElementById('mm-'+k).classList.toggle('active',k===m));
+  mBuildGrid(); mBuildDegreeRow(); mPick();
+}
+function mSetContext(v){
+  mContext=v;
+  document.getElementById('mv-context').classList.toggle('active',v);
+  document.getElementById('mv-bare').classList.toggle('active',!v);
+}
+
+function mPick(){
+  const p=mPool();
+  mCurrent=p[Math.floor(Math.random()*p.length)];
+  mRoot=55+Math.floor(Math.random()*10);
+  mAnswered=false;
+  const ctx_label=mContext?'Root chord sounds first, then the mystery note.':'Single note — identify the scale degree.';
+  setFeedback('m-feedback','Press play — '+ctx_label);
+  clearGrid('m-grid');
+  document.querySelectorAll('.deg').forEach(d=>d.classList.remove('active'));
+}
+
+function mPlay(){
+  const ctx=getACX();
+  const now=ctx.currentTime+0.05;
+  if(mContext){
+    // Play root chord (major or minor triad) then note
+    const rootIvs=mMode==='minor'?[0,3,7]:[0,4,7];
+    rootIvs.forEach(iv=>playNote(ctx,mRoot+iv,now,1.2,0.14));
+    playNote(ctx,mRoot+mCurrent.iv,now+1.4,2.0,0.2);
+  } else {
+    playNote(ctx,mRoot+mCurrent.iv,now,2.2,0.2);
+  }
+}
+
+function mCheck(name){
+  if(mAnswered) return;
+  mAnswered=true; mTotal++;
+  const ok=name===mCurrent.name;
+  if(ok) mScore++;
+  updateStats('m',mScore,mTotal);
+  disableGrid('m-grid');
+  // highlight degree ring
+  const degEl=document.getElementById('mdeg-'+slug(mCurrent.name));
+  if(degEl) degEl.classList.add('active');
+  const selEl=document.getElementById('mab-'+slug(name));
+  const corEl=document.getElementById('mab-'+slug(mCurrent.name));
+  if(ok){
+    selEl.classList.add('correct');
+    setFeedback('m-feedback','Correct — degree '+mCurrent.label+'.','ok');
+  } else {
+    selEl.classList.add('wrong');
+    if(corEl) corEl.classList.add('reveal');
+    setFeedback('m-feedback','That was the '+mCurrent.name+' (degree '+mCurrent.label+').','bad');
+  }
+  setTimeout(()=>mNext(),2200);
+}
+
+function mNext(){
+  mQNum++;
+  document.getElementById('m-qnum').textContent='Question '+mQNum;
+  mPick();
+}
+function mReset(){
+  mScore=0;mTotal=0;mQNum=1;
+  updateStats('m',0,0);
+  document.getElementById('m-qnum').textContent='Question 1';
+  mPick();
+}
+
+function mBuildGrid(){
+  const p=mPool(), grid=document.getElementById('m-grid');
+  grid.innerHTML='';
+  p.forEach(deg=>{
+    const b=document.createElement('button');
+    b.className='ans-btn'; b.id='mab-'+slug(deg.name);
+    b.textContent=deg.label;
+    b.addEventListener('click',()=>mCheck(deg.name));
+    grid.appendChild(b);
+  });
+}
+
+function mBuildDegreeRow(){
+  const p=mPool(), row=document.getElementById('m-degree-row');
+  row.innerHTML='';
+  p.forEach(deg=>{
+    const d=document.createElement('div');
+    d.className='deg'; d.id='mdeg-'+slug(deg.name);
+    d.textContent=deg.label;
+    row.appendChild(d);
+  });
+}
+
+// ─── INIT ────────────────────────────────────────────────────────────────────
+cBuildGrid(); cPick();
+pBuildGrid(); pPick();
+mBuildGrid(); mBuildDegreeRow(); mPick();
+</script>
+</body>
+</html>
